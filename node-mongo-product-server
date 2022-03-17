@@ -1,0 +1,85 @@
+const express = require('express');
+const app = express();
+const port=5000;
+const ObjectId=require('mongodb').ObjectId;
+
+var cors=require('cors');
+app.use(cors());
+app.use(express.json());
+
+//user:mydbProducts
+//pass:EEdzk6giEoDgClhU
+
+
+const { MongoClient, ServerApiVersion } = require('mongodb');
+const uri = "mongodb+srv://mydbProducts:EEdzk6giEoDgClhU@cluster0.a0n4p.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
+const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+
+async function run() {
+  try {
+    await client.connect();
+    const database = client.db("productMaster");
+    const productsCollection = database.collection("products");
+   
+   //APP GET
+   app.get('/products', async(req,res)=>{
+    const cursor = productsCollection.find({});
+    const products=await cursor.toArray();
+    res.send(products);
+   })
+   //APP GET
+   app.get('/products/:id',async(req,res)=>{
+       const id=req.params.id;
+       const query = { _id:ObjectId(id)};
+       const result = await productsCollection.findOne(query);
+       res.send(result);
+   })
+    //APP POST
+    app.post('/products', async(req, res) => {
+      const newProduct= req.body;
+      const result = await productsCollection.insertOne(newProduct);
+      console.log('Added product',result);
+    
+      res.send(result);
+    })
+  //UPDATE API
+   app.put('/products/:id',async(req,res)=>{
+     const id=req.params.id;
+     const updateProduct=req.body;
+     const filter ={ _id:ObjectId(id) };
+     const options = { upsert: true };
+     const updateDoc = {
+      $set: {
+              name:updateProduct.name,
+              price:updateProduct.price,
+              quantity:updateProduct.quantity
+      },
+    };
+    const result = await productsCollection.updateOne(filter, updateDoc, options);
+ 
+    res.send(result);
+   })
+
+  //DELETE API
+      app.delete('/products/:id',async(req,res)=>{
+         const id=req.params.id;
+         const query = { _id:ObjectId(id) };
+         const result = await productsCollection.deleteOne(query);
+         res.send(result);
+})
+
+  } finally {
+    // await client.close();
+  }
+}
+run().catch(console.dir);
+
+
+
+app.get('/',(req,res)=>{
+  res.send('Running my CRUD Server');
+})
+
+app.listen(port,()=>{
+     console.log('Running on port',port)
+})
